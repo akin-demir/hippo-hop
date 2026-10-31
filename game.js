@@ -2,7 +2,6 @@
 const canvas=document.querySelector('canvas'),c=canvas.getContext('2d'),$=id=>document.getElementById(id);
 let W=1000,H=410,dpr=1,state='ready',distance=0,speed=290,y=0,vy=0,obstacles=[],timer=1.8,last=0,clock=0,best=0,lastShake=0,motionEnabled=false,sensorSeen=false,motionTimer;
 let level=1,jumpStyle=-1,jumpAge=0,landing=0,particles=[],levelFlash=0;
-const jumpWords=['WHEEE!','HIP HIP!','LOOK, NO HANDS!','AIR HIPPO!','SUPER HIPPO!','CANNONBALL!','SO FABULOUS!','SWIMMING IN AIR!'];
 let playMode=false,nativeWasFull=false,ambientClock=0,cheer=0,crashAge=0;
 function enterPlay(native=true){
  if(!playMode){playMode=true;document.body.classList.add('playing');resize();}
@@ -18,8 +17,8 @@ $('exitPlay').addEventListener('click',exitPlay);$('expand').addEventListener('c
 function difficulty(score){return {level:Math.min(5,1+Math.floor(score/100)),speed:Math.min(570,290+score*.6),gap:Math.max(.98,1.65-score*.0015)};}
 function burst(x,z,count,spark=false){for(let i=0;i<count;i++){const life=.3+Math.random()*.35;particles.push({x,z,vx:-30-Math.random()*100,vy:-25-Math.random()*100,life,total:life,size:2+Math.random()*4,spark});}}
 function drawEffects(){for(const p of particles){c.save();c.globalAlpha=p.life/p.total;if(p.spark){c.strokeStyle='#b69b47';c.lineWidth=2;c.beginPath();c.moveTo(p.x-p.size,p.z);c.lineTo(p.x+p.size,p.z);c.moveTo(p.x,p.z-p.size);c.lineTo(p.x,p.z+p.size);c.stroke();}else ellipse(p.x,p.z,p.size,p.size*.7,'#c0bb93');c.restore();}
- if(y>25&&state==='running'){c.save();c.globalAlpha=Math.min(1,jumpAge*8);c.fillStyle='#526944';c.font='bold 11px sans-serif';c.textAlign='center';c.fillText(jumpWords[jumpStyle],Math.max(65,Math.min(135,W*.22))+8,H-75-103-y);c.restore();}
- if(levelFlash>0){c.save();c.globalAlpha=Math.min(1,levelFlash);c.fillStyle='#365c3d';c.font='bold 15px sans-serif';c.textAlign='center';c.fillText('LEVEL '+level+' · '+['','EASY DOES IT','FIND YOUR FLOW','PICKING UP SPEED','WILD STRIDE','HIPPO HUSTLE'][level],W/2,106);c.restore();}}
+}
+
 try{best=Number(localStorage.getItem('hippo-hop-best'))||0;}catch{} $('best').textContent=String(best).padStart(5,'0');
 function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=Math.max(320,r.height);dpr=Math.min(devicePixelRatio||1,2);canvas.width=W*dpr;canvas.height=r.height*dpr;c.setTransform(dpr,0,0,dpr*r.height/H,0,0);}window.addEventListener('resize',resize);resize();
 function ellipse(x,z,rx,ry,color){c.fillStyle=color;c.beginPath();c.ellipse(x,z,rx,ry,0,0,Math.PI*2);c.fill();}
@@ -94,7 +93,25 @@ function tick(now){
  }
  bg();const hx=Math.min(135,W*.22),g=H-75;ellipse(hx+3,g+6,43*(1-y/500),5,'#b5c0a0');hippo(hx,g-9-y,clock,state==='running'&&y===0);obstacles.forEach(drawObstacle);drawEffects();requestAnimationFrame(tick);
 }requestAnimationFrame(tick);
-$('start').addEventListener('click',start);canvas.addEventListener('pointerdown',e=>{e.preventDefault();if(state==='ready'||state==='dead')start();else if(state==='paused')start();else jump();});function pause(){if(state==='running'){state='paused';ui();}else if(state==='paused')start();}$('pause').addEventListener('click',pause);document.addEventListener('keydown',e=>{if(e.target.matches('button,input'))return;if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(e.repeat)return;if(state==='running')jump();else start();}if(e.code==='Escape')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='running'){state='paused';ui();}});
+$('start').addEventListener('click',start);
+function hitsHippo(clientX,clientY){
+ const rect=canvas.getBoundingClientRect();
+ const px=(clientX-rect.left)*W/rect.width-Math.min(135,W*.22);
+ const pz=(clientY-rect.top)*H/rect.height-(H-84-y);
+ // Generous silhouette targets include the head, body, snout, and moving feet.
+ return (px+5)**2/54**2+(pz+32)**2/39**2<=1
+  ||(px-28)**2/37**2+(pz+40)**2/39**2<=1
+  ||(px>=15&&px<=74&&pz>=-56&&pz<=-5)
+  ||(px>=-42&&px<=42&&pz>=-23&&pz<=18);
+}
+canvas.addEventListener('pointerdown',e=>{
+ if(e.isPrimary===false||(e.button!==undefined&&e.button!==0)||!hitsHippo(e.clientX,e.clientY))return;
+ e.preventDefault();
+ if(state==='running')jump();else start();
+});
+function pause(){if(state==='running'){state='paused';ui();}else if(state==='paused')start();}
+$('pause').addEventListener('click',pause);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='running'){state='paused';ui();}});
 // Motion permission must be requested directly inside a button's click handler on iOS.
 let gravity=null,peakMotion=0,lastSensorUi=0,motionPending=false;
 function motionStatus(message,label){

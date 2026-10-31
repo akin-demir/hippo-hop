@@ -172,3 +172,7 @@ async function enableMotion(){
 $('motion').addEventListener('click',enableMotion);
 $('motionQuick').addEventListener('click',enableMotion);
 $('shakeStart').addEventListener('click',()=>{enterPlay(false);enableMotion().then(ok=>{if(ok)start();});});
+
+// Keep mobile long presses inside the game from opening selection or image menus.
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('dragstart',e=>e.preventDefault());

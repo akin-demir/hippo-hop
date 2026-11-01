@@ -2,6 +2,7 @@
 const canvas=document.querySelector('canvas'),c=canvas.getContext('2d'),$=id=>document.getElementById(id);
 let W=1000,H=410,dpr=1,state='ready',distance=0,speed=290,y=0,vy=0,obstacles=[],timer=1.8,last=0,clock=0,best=0,lastShake=0,motionEnabled=false,sensorSeen=false,motionTimer;
 let level=1,jumpStyle=-1,jumpAge=0,landing=0,particles=[],levelFlash=0;
+let jumpCount=0,flipJump=false;
 let playMode=false,nativeWasFull=false,ambientClock=0,cheer=0,crashAge=0;
 function enterPlay(native=true){
  if(!playMode){playMode=true;document.body.classList.add('playing');resize();}
@@ -30,12 +31,15 @@ try{best=Number(localStorage.getItem('hippo-hop-best'))||0;}catch{} $('best').te
 function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=Math.max(320,r.height);dpr=Math.min(devicePixelRatio||1,2);canvas.width=W*dpr;canvas.height=r.height*dpr;c.setTransform(dpr,0,0,dpr*r.height/H,0,0);}window.addEventListener('resize',resize);resize();
 function ellipse(x,z,rx,ry,color){c.fillStyle=color;c.beginPath();c.ellipse(x,z,rx,ry,0,0,Math.PI*2);c.fill();}
 function round(x,z,w,h,r,color){c.fillStyle=color;c.beginPath();c.roundRect(x,z,w,h,r);c.fill();}
+function flipAngle(age){const p=Math.max(0,Math.min(1,(age-.06)/.54));return Math.PI*2*p*p*(3-2*p);}
 function hippo(x,z,t,active){
  const stride=t*(13+(speed-290)*.015),bounce=active?Math.abs(Math.sin(stride))*3:0,air=y>1;
  const airBeat=Math.sin(Math.min(1,jumpAge/.75)*Math.PI);
  const tilt=state==='dead'?Math.sin(crashAge*10)*.12:air?airBeat*[-.12,.15,-.2,.1,-.28,.3,-.16,.16][jumpStyle]:active?Math.sin(t*4)*.025:0;
  const face=air?jumpStyle:cheer>0?6:Math.floor(t/2.8)%4;
  c.save();c.translate(x,z-bounce);c.rotate(tilt);
+ // Rotate around the belly, completing the somersault before touchdown.
+ if(air&&flipJump&&state!=='dead'){c.translate(0,-32);c.rotate(flipAngle(jumpAge));c.translate(0,32);}
  const squash=landing>0?Math.sin(landing/.16*Math.PI)*.13:0;c.scale(1+squash,1-squash);
  if(air)c.scale(1-airBeat*.035,1+airBeat*.05);
  function leg(px,phase,far){
@@ -123,8 +127,8 @@ function drawPrimate(o,g){
 }
 function drawObstacle(o){let g=H-75;if(o.type==='monkey'||o.type==='gorilla'){drawPrimate(o,g);return;}if(o.type==='rock'){ellipse(o.x+o.w/2,g-3,o.w*.56,5,'#bac3a0');c.fillStyle='#514064';c.beginPath();c.moveTo(o.x,g);c.lineTo(o.x+3,g-o.h*.6);c.lineTo(o.x+o.w*.35,g-o.h);c.lineTo(o.x+o.w*.75,g-o.h*.9);c.lineTo(o.x+o.w,g);c.closePath();c.fill();c.strokeStyle='#2c203c';c.lineWidth=2.5;c.stroke();c.strokeStyle='#cbb3e0';c.beginPath();c.moveTo(o.x+8,g-o.h*.55);c.lineTo(o.x+o.w*.36,g-o.h*.8);c.lineTo(o.x+o.w*.64,g-o.h*.72);c.stroke();}else{round(o.x,g-o.h,o.w,o.h,7,'#a33e28');c.strokeStyle='#57251e';c.lineWidth=2.5;c.stroke();ellipse(o.x+o.w-3,g-o.h/2,6,o.h/2,'#ffd28b');ellipse(o.x+o.w-3,g-o.h/2,3,o.h/2-5,'#692b26');c.strokeStyle='#ffaf67';c.beginPath();c.moveTo(o.x+6,g-o.h+7);c.lineTo(o.x+o.w-12,g-o.h+9);c.stroke();}}
 function ui(){ $('overlay').classList.toggle('hidden',state==='running');$('pause').textContent=state==='paused'?'▶':'Ⅱ';if(state==='dead'){$('message').textContent='One more little hop?';$('sub').textContent=`You earned ${Math.floor(distance*.025)} XP. The riverbank is calling.`;$('start').innerHTML='Run again <span>↗</span>';}else if(state==='paused'){$('message').textContent='Take a little breather.';$('sub').textContent='Your adventure will be right here.';$('start').innerHTML='Keep running <span>↗</span>';} $('runStatus').textContent=state==='running'?'●  FIND YOUR RHYTHM':state==='dead'?'●  A GOOD RUN. A FRESH START.':state==='paused'?'●  TAKING A BREATHER':'●  YOUR NEXT ADVENTURE AWAITS';}
-function start(){enterPlay();if(state==='paused'){state='running';ui();return;}distance=0;speed=290;y=0;vy=0;timer=1.7;obstacles=[];level=1;jumpAge=0;landing=0;particles=[];levelFlash=0;cheer=0;crashAge=0;state='running';$('level').textContent='LV 1 · EASY DOES IT';$('score').textContent='00000';ui();}
-function jump(){if(state!=='running')return;if(y<1){vy=600;y=.1;jumpAge=0;jumpStyle=(jumpStyle+1+Math.floor(Math.random()*7))%8;burst(Math.min(135,W*.22),H-75,10);burst(Math.min(135,W*.22)+25,H-125,5,true);}}
+function start(){enterPlay();if(state==='paused'){state='running';ui();return;}distance=0;speed=290;y=0;vy=0;timer=1.7;obstacles=[];level=1;jumpAge=0;landing=0;particles=[];levelFlash=0;cheer=0;crashAge=0;jumpCount=0;flipJump=false;state='running';$('level').textContent='LV 1 · EASY DOES IT';$('score').textContent='00000';ui();}
+function jump(){if(state!=='running')return;if(y<1){vy=600;y=.1;jumpAge=0;jumpCount++;flipJump=jumpCount%3===0;jumpStyle=(jumpStyle+1+Math.floor(Math.random()*7))%8;burst(Math.min(135,W*.22),H-75,10);burst(Math.min(135,W*.22)+25,H-125,5,true);}}
 function finish(){if(state==='dead')return;state='dead';crashAge=0;const score=Math.floor(distance*.025);if(score>best){best=score;try{localStorage.setItem('hippo-hop-best',best);}catch{}$('best').textContent=String(best).padStart(5,'0');}ui();}
 function tick(now){
  const dt=Math.min((now-last)/1000||0,.035);last=now;ambientClock+=dt;if(state==='dead')crashAge+=dt;

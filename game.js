@@ -24,7 +24,7 @@ function updateJetpack(dt){
    // Ease into flight and descend during the last ten XP; travel earns 100 XP.
    const ramp=Math.min(1,progress/.1,(1-progress)/.1);
    const eased=ramp*ramp*(3-2*ramp);
-   y=Math.max(0,(Math.min(140,H-210)+Math.sin(clock*7)*3)*eased+(progress<.1?flightLift*(1-eased):0));vy=0;
+   y=Math.max(0,(Math.min(220,H*.3,H-210)+Math.sin(clock*7)*3)*eased+(progress<.1?flightLift*(1-eased):0));vy=0;
   }
  }
 }
@@ -38,7 +38,7 @@ function drawJetpack(x,z,worn=false){
   round(side*7-5,-16,10,29,4,'#213a65');
   round(side*7-3,-13,6,17,3,'#51e3f0');
   round(side*7-6,6,12,5,2,'#ffd05a');
-  if(worn){const flame=12+Math.sin(clock*35+side)*5;c.fillStyle='#ff8144';c.beginPath();c.moveTo(side*7-5,12);c.lineTo(side*7,12+flame);c.lineTo(side*7+5,12);c.fill();ellipse(side*7,15,2,5,'#fff1a3');}
+  if(worn){const flame=23+Math.sin(clock*35+side)*7;c.fillStyle='#ff8144';c.beginPath();c.moveTo(side*7-5,12);c.lineTo(side*7,12+flame);c.lineTo(side*7+5,12);c.fill();ellipse(side*7,15,2,5,'#fff1a3');}
  }
  round(-4,-8,8,14,2,'#ffcf55');
  if(!worn){c.fillStyle='#213a65';c.font='bold 10px sans-serif';c.textAlign='center';c.fillText('JETPACK',0,-40);}
@@ -78,7 +78,7 @@ function flipAngle(age){const p=Math.max(0,Math.min(1,(age-.06)/.54));return Mat
 function hippo(x,z,t,active){
  const stride=t*(13+(speed-290)*.015),bounce=active?Math.abs(Math.sin(stride))*3:0,air=y>1;
  const airBeat=Math.sin(Math.min(1,jumpAge/.75)*Math.PI);
- const tilt=state==='dead'?Math.sin(crashAge*10)*.12:air?airBeat*[-.12,.15,-.2,.1,-.28,.3,-.16,.16][jumpStyle]:active?Math.sin(t*4)*.025:0;
+ const tilt=flightStart!==null?-.12+Math.sin(clock*5)*.025:state==='dead'?Math.sin(crashAge*10)*.12:air?airBeat*[-.12,.15,-.2,.1,-.28,.3,-.16,.16][jumpStyle]:active?Math.sin(t*4)*.025:0;
  const face=flightStart!==null?6:air?jumpStyle:cheer>0?6:Math.floor(t/2.8)%4;
  c.save();c.translate(x,z-bounce);c.rotate(tilt);
  // Rotate around the belly, completing the somersault before touchdown.
@@ -96,7 +96,6 @@ function hippo(x,z,t,active){
   for(let j=0;j<3;j++){c.beginPath();c.moveTo(3+j*4,24-lift);c.lineTo(3+j*4,28-lift);c.stroke();}
   c.restore();
  }
- if(flightStart!==null)drawJetpack(-34,-37,true);
  c.strokeStyle='#536846';c.lineWidth=4;c.beginPath();c.moveTo(-36,-29);c.quadraticCurveTo(-52,-40+Math.sin(stride)*3,-45,-48);c.stroke();
  leg(-23,Math.PI,true);leg(20,0,true);
  ellipse(-5,-32,42,29,'#8c9fa5');ellipse(-13,-40,26,16,'#9eafb2');
@@ -120,6 +119,11 @@ function hippo(x,z,t,active){
  ellipse(28,-32,6,4,goofy?'#d5aaa1':'#c0b2a6');
  if(active&&face===2){c.strokeStyle='#698679';c.lineWidth=1.5;c.beginPath();c.moveTo(62,-32);c.lineTo(69,-35);c.moveTo(66,-22);c.lineTo(74,-22);c.stroke();}
  if(state==='dead'){for(let i=0;i<3;i++){const angle=ambientClock*4+i*Math.PI*2/3;ellipse(24+Math.cos(angle)*26,-82+Math.sin(angle)*5,3,2,'#c7a252');}}
+ // Draw the strapped-on rocket over the rear flank so the body cannot hide it.
+ if(flightStart!==null){
+  c.strokeStyle='#263455';c.lineWidth=4;c.beginPath();c.moveTo(-30,-54);c.lineTo(1,-25);c.stroke();
+  c.save();c.translate(-35,-48);c.scale(1.6,1.6);drawJetpack(0,0,true);c.restore();
+ }
  c.restore();
 }
 function bg(){
@@ -182,7 +186,7 @@ function tick(now){
   if(d.level!==level){level=d.level;levelFlash=2;cheer=1.2;burst(Math.min(135,W*.22)+20,H-150,12,true);}
   $('level').textContent='LV '+level+' · '+(level>=2?'JUNGLE MISCHIEF':level>=5?'HIPPO HUSTLE':['','EASY DOES IT','FIND YOUR FLOW','PICKING UP SPEED','WILD STRIDE'][level]);
   levelFlash=Math.max(0,levelFlash-dt);landing=Math.max(0,landing-dt);
-  if(y>0)jumpAge+=dt;
+  if(y>0&&flightStart===null)jumpAge+=dt;
   const wasAirborne=y>0;if(flightStart===null){vy-=1600*dt;y+=vy*dt;}
   if(y<0){y=0;vy=0;if(wasAirborne){cheer=.65;landing=.16;burst(Math.min(135,W*.22),H-75,12);}}
   updateJetpack(dt);

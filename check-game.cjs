@@ -9,13 +9,13 @@ vm.runInContext(`
  if(difficulty(1100).speed<=difficulty(1000).speed)throw Error('Progression stopped after 1000');
  const originalRandom=Math.random;
  Math.random=()=>0;
- if(makeObstacle(999).type!=='rock'||makeObstacle(1000).type!=='gorilla')throw Error('Primate unlock boundary');
+ if(makeObstacle(99).type!=='rock'||makeObstacle(100).type!=='gorilla')throw Error('Primate unlock boundary');
  Math.random=()=>.5;
- if(makeObstacle(1000).type!=='monkey')throw Error('Monkey never spawns');
+ if(makeObstacle(100).type!=='monkey')throw Error('Monkey never spawns');
  Math.random=originalRandom;
  start();jump();const first=vy;jump();if(vy!==first)throw Error('Double jump');
- state='running';distance=40000;obstacles=[];timer=0;y=0;vy=0;last=0;tick(16);
- if(speed!==490||level!==11||obstacles.length!==1)throw Error('1000 XP tick progression');
+ state='running';distance=4000;obstacles=[];timer=0;y=0;vy=0;last=0;tick(16);
+ if(speed!==310||level!==2||obstacles.length!==1)throw Error('100 XP tick progression');
  for(const type of ['monkey','gorilla']){
   state='running';y=0;vy=0;obstacles=[{x:Math.min(135,W*.22),w:54,h:62,type,phase:0}];tick(last+16);
   if(state!=='dead')throw Error(type+' collision missed');

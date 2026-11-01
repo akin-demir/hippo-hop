@@ -1,6 +1,6 @@
 # Hippo Hop
 
-A mobile-friendly endless runner with an animated hippo, rocks and logs, distance scoring, and a locally saved best score.
+A mobile-friendly endless runner with an animated hippo, a lush jungle riverbank, rocks and logs, XP scoring, and a locally saved best score.
 
 ## Publish with GitHub Pages
 
@@ -16,6 +16,13 @@ Pause with the pause button or Escape. Switching away pauses automatically.
 
 No installation or build is required. Serve index.html and game.js together.
 
+## Progression
+
+Earn XP by running. Speed increases by 20 pixels per second every 100 XP. At 1,000 XP, taunting monkeys and gorillas join the rocks and logs as jumpable hazards. Restarting resets speed and unlocks.
+
 ## Verification
+
+Run `node --check game.js` and `node check-game.cjs` for syntax and simulated milestone, obstacle, collision, pause, and restart checks. Visual appearance still needs browser testing.
+
 
 JavaScript syntax and simulated logic checks pass for start, jump, no double jump, grounded physics, pause/resume, distance score, best score, and restart at mobile width. Appearance and physical motion controls still need real-browser and real-phone testing.

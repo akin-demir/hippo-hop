@@ -55,6 +55,24 @@ vm.runInContext(`
  obstacles=[{x:Math.min(135,W*.22),w:54,h:62,type:'gorilla',phase:0}];tick(last+16);if(state!=='running')throw Error('Unsafe landing');
  obstacles=[];updateJetpack(1.1);if(landingShield!==0)throw Error('Shield never expires');
  finish();start();if(flightStart!==null||jetpack||jetpackSpawned||landingShield)throw Error('Jetpack restart reset');
+
+ // Sensor strength changes height, with a bounded launch impulse.
+ if(shakeJumpVelocity(5,5)!==MIN_JUMP||shakeJumpVelocity(1000,5)!==MAX_JUMP)throw Error('Shake caps');
+ if(!(shakeJumpVelocity(10,5)<shakeJumpVelocity(20,5)))throw Error('Shake scaling');
+ $('sensitivity').max='12';$('sensitivity').value='10';
+ let sensorNow=2000;performance.now=()=>sensorNow;
+ finish();start();onMotion({acceleration:{x:0,y:6,z:0}});
+ const gentle=vy;if(gentle<MIN_JUMP||gentle>=600)throw Error('Gentle launch');
+ sensorNow+=40;onMotion({acceleration:{x:0,y:1000,z:0}});
+ if(vy!==MAX_JUMP||jumpCount!==1)throw Error('Peak capture or double launch');
+ sensorNow+=40;onMotion({acceleration:{x:0,y:2000,z:0}});
+ if(vy!==MAX_JUMP)throw Error('Repeated peak exceeded cap');
+ sensorNow+=200;onMotion({acceleration:{x:0,y:3000,z:0}});
+ if(vy!==MAX_JUMP)throw Error('Late boost');
+ y=0;jump();if(vy!==600)throw Error('Tap launch changed');
+ jump(1000);if(vy!==600)throw Error('Airborne jump boosted');
+ y=0;jump(1000);if(vy!==MAX_JUMP)throw Error('Direct upper cap');
+ y=0;jump(1);if(vy!==MIN_JUMP)throw Error('Direct lower cap');
  for(const width of [320,390,1000]){W=width;bg();drawPrimate({x:200,w:54,h:62,type:'gorilla',phase:0},H-75);}
 `,sandbox);
 console.log('PASS: jetpack spawn/pickup/miss, 100 XP flight, immunity, pause and reset;  XP boundaries, primate unlock and types, collision/jump clearance, pause/resume, restart, and drawing at 3 widths');

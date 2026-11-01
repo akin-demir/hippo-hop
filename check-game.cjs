@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const elements=new Map();
-const context=new Proxy({createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}});
+const context=new Proxy({createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:(...args)=>{if(args.some(v=>typeof v==='number'&&!Number.isFinite(v)))throw Error('Non-finite canvas coordinate: '+String(k));}});
 const element=id=>{if(!elements.has(id))elements.set(id,{textContent:'',classList:{add(){},remove(){},toggle(){}},addEventListener(){},getBoundingClientRect:()=>({width:390,height:380,left:0,top:0}),getContext:()=>context});return elements.get(id);};
 const sandbox={console,Math,Number,String,Promise,devicePixelRatio:1,localStorage:{getItem:()=>null,setItem(){}},requestAnimationFrame(){},setTimeout(){},clearTimeout(){},performance:{now:()=>1000},document:{querySelector:()=>element('canvas'),getElementById:element,addEventListener(){},body:element('body'),documentElement:element('html')},window:{addEventListener(){},removeEventListener(){}}};
 vm.createContext(sandbox);vm.runInContext(fs.readFileSync(__dirname+'/game.js','utf8'),sandbox);
@@ -40,9 +40,13 @@ vm.runInContext(`
  jetpack={x:Math.min(135,W*.22),z:H-145};updateJetpack(0);
  if(flightStart!==distance||jetpack)throw Error('Pickup contact');
  const flightOrigin=distance;
+ // Automatic pickup must draw even if the player has never jumped.
+ jumpStyle=-1;hippo(Math.min(135,W*.22),H-84-y,clock,false);
+
  state='running';timer=100;obstacles=[{x:Math.min(135,W*.22),w:54,h:62,type:'gorilla',phase:0}];tick(last+16);
  if(state!=='running')throw Error('Flight immunity on takeoff');
  distance=flightOrigin+2000;updateJetpack(0);if(y<100)throw Error('Flight height');
+ hippo(Math.min(135,W*.22),H-84-y,clock,false);
  const altitude=y;jump();if(y!==altitude||vy!==0)throw Error('Jump altered flight');
  pause();const pausedProgress=flightProgress();tick(last+16);if(flightProgress()!==pausedProgress)throw Error('Paused flight progressed');start();
  distance=flightOrigin+3999;updateJetpack(0);if(flightStart===null)throw Error('Flight ended before 100 XP');

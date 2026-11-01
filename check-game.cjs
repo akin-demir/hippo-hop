@@ -13,7 +13,11 @@ vm.runInContext(`
  Math.random=()=>.5;
  if(makeObstacle(100).type!=='monkey')throw Error('Monkey never spawns');
  Math.random=originalRandom;
- start();jump();const first=vy;jump();if(vy!==first)throw Error('Double jump');
+ start();
+ if(flipAngle(0)!==0||Math.abs(flipAngle(.6)-Math.PI*2)>1e-10||Math.abs(flipAngle(.33)-Math.PI)>1e-10)throw Error('Flip rotation timing');
+ for(let i=1;i<=3;i++){y=0;jump();if(flipJump!==(i===3)||vy!==600)throw Error('Every third jump flips with same physics');}
+ finish();start();if(jumpCount!==0||flipJump)throw Error('Flip reset');
+ jump();const first=vy;jump();if(vy!==first)throw Error('Double jump');
  state='running';distance=4000;obstacles=[];timer=0;y=0;vy=0;last=0;tick(16);
  if(speed!==310||level!==2||obstacles.length!==1)throw Error('100 XP tick progression');
  for(const type of ['monkey','gorilla']){

@@ -17,7 +17,7 @@ $('exitPlay').addEventListener('click',exitPlay);$('expand').addEventListener('c
 // XP comes from distance; each completed 100 XP adds a distinct speed step.
 function difficulty(xp){const tier=Math.floor(xp/100);return {level:1+tier,speed:290+20*tier,gap:Math.max(1.25,1.8-tier*.025)};}
 function makeObstacle(xp){
- const primate=xp>=1000&&Math.random()<.55;
+ const primate=xp>=100&&Math.random()<.55;
  if(primate){const gorilla=Math.random()<.45;return {x:W+50,w:gorilla?54:40,h:gorilla?62:48,type:gorilla?'gorilla':'monkey',phase:Math.random()*Math.PI*2};}
  const rock=Math.random()<.65;
  return {x:W+50,w:rock?30+Math.random()*16:48+Math.random()*10,h:rock?30+Math.random()*22:39,type:rock?'rock':'log'};
@@ -132,7 +132,7 @@ function tick(now){
   clock+=dt;cheer=Math.max(0,cheer-dt);distance+=speed*dt;
   const d=difficulty(Math.floor(distance*.025));speed=d.speed;
   if(d.level!==level){level=d.level;levelFlash=2;cheer=1.2;burst(Math.min(135,W*.22)+20,H-150,12,true);}
-  $('level').textContent='LV '+level+' · '+(level>=11?'JUNGLE MISCHIEF':level>=5?'HIPPO HUSTLE':['','EASY DOES IT','FIND YOUR FLOW','PICKING UP SPEED','WILD STRIDE'][level]);
+  $('level').textContent='LV '+level+' · '+(level>=2?'JUNGLE MISCHIEF':level>=5?'HIPPO HUSTLE':['','EASY DOES IT','FIND YOUR FLOW','PICKING UP SPEED','WILD STRIDE'][level]);
   levelFlash=Math.max(0,levelFlash-dt);landing=Math.max(0,landing-dt);
   if(y>0)jumpAge+=dt;
   const wasAirborne=y>0;vy-=1600*dt;y+=vy*dt;

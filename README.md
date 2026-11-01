@@ -18,7 +18,7 @@ No installation or build is required. Serve index.html and game.js together.
 
 ## Progression
 
-Earn XP by running. Speed increases by 20 pixels per second every 100 XP. At 1,000 XP, taunting monkeys and gorillas join the rocks and logs as jumpable hazards. Restarting resets speed and unlocks.
+Earn XP by running. Speed increases by 20 pixels per second every 100 XP. At 100 XP, taunting monkeys and gorillas join the rocks and logs as jumpable hazards. Restarting resets speed and unlocks.
 
 ## Verification
 

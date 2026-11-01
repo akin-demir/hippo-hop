@@ -3,6 +3,49 @@ const canvas=document.querySelector('canvas'),c=canvas.getContext('2d'),$=id=>do
 let W=1000,H=410,dpr=1,state='ready',distance=0,speed=290,y=0,vy=0,obstacles=[],timer=1.8,last=0,clock=0,best=0,lastShake=0,motionEnabled=false,sensorSeen=false,motionTimer;
 let level=1,jumpStyle=-1,jumpAge=0,landing=0,particles=[],levelFlash=0;
 let jumpCount=0,flipJump=false;
+let jetpack=null,jetpackSpawnXP=0,jetpackSpawned=false,flightStart=null,flightLift=0,landingShield=0;
+function resetJetpack(){jetpack=null;jetpackSpawnXP=205+Math.random()*55;jetpackSpawned=false;flightStart=null;landingShield=0;}
+function flightProgress(){return flightStart===null?null:Math.max(0,(distance-flightStart)/4000);}
+function collectJetpack(){jetpack=null;flightStart=distance;flightLift=y;flipJump=false;vy=0;cheer=1.2;burst(Math.min(135,W*.22),H-140-y,16,true);}
+function updateJetpack(dt){
+ const hx=Math.min(135,W*.22),xp=distance*.025;
+ landingShield=Math.max(0,landingShield-dt);
+ if(!jetpackSpawned&&xp>=jetpackSpawnXP){jetpackSpawned=true;jetpack={x:Math.min(W+35,hx+800),z:H-145};}
+ if(jetpack){
+  jetpack.x-=speed*dt;
+  const bodyZ=H-116-y;
+  if(Math.abs(jetpack.x-hx)<58&&Math.abs(jetpack.z-bodyZ)<52)collectJetpack();
+  else if(jetpack.x< -40)jetpack=null;
+ }
+ const progress=flightProgress();
+ if(progress!==null){
+  if(progress>=1){flightStart=null;y=0;vy=0;landing=.16;landingShield=1;cheer=.8;burst(hx,H-75,14);}
+  else{
+   // Ease into flight and descend during the last ten XP; travel earns 100 XP.
+   const ramp=Math.min(1,progress/.1,(1-progress)/.1);
+   const eased=ramp*ramp*(3-2*ramp);
+   y=Math.max(0,(Math.min(140,H-210)+Math.sin(clock*7)*3)*eased+(progress<.1?flightLift*(1-eased):0));vy=0;
+  }
+ }
+}
+function drawJetpack(x,z,worn=false){
+ c.save();c.translate(x,z);
+ if(!worn){
+  c.globalAlpha=.2+.08*Math.sin(ambientClock*5);ellipse(0,0,31,35,'#ffe473');c.globalAlpha=1;
+  c.strokeStyle='#fff4bc';c.lineWidth=2;c.beginPath();c.ellipse(0,0,25,29,0,0,Math.PI*2);c.stroke();
+ }
+ for(const side of [-1,1]){
+  round(side*7-5,-16,10,29,4,'#213a65');
+  round(side*7-3,-13,6,17,3,'#51e3f0');
+  round(side*7-6,6,12,5,2,'#ffd05a');
+  if(worn){const flame=12+Math.sin(clock*35+side)*5;c.fillStyle='#ff8144';c.beginPath();c.moveTo(side*7-5,12);c.lineTo(side*7,12+flame);c.lineTo(side*7+5,12);c.fill();ellipse(side*7,15,2,5,'#fff1a3');}
+ }
+ round(-4,-8,8,14,2,'#ffcf55');
+ if(!worn){c.fillStyle='#213a65';c.font='bold 10px sans-serif';c.textAlign='center';c.fillText('JETPACK',0,-40);}
+ c.restore();
+}
+function drawJetpackPickup(){if(jetpack)drawJetpack(jetpack.x,jetpack.z+Math.sin(ambientClock*4)*4);}
+
 let playMode=false,nativeWasFull=false,ambientClock=0,cheer=0,crashAge=0;
 function enterPlay(native=true){
  if(!playMode){playMode=true;document.body.classList.add('playing');resize();}
@@ -36,10 +79,10 @@ function hippo(x,z,t,active){
  const stride=t*(13+(speed-290)*.015),bounce=active?Math.abs(Math.sin(stride))*3:0,air=y>1;
  const airBeat=Math.sin(Math.min(1,jumpAge/.75)*Math.PI);
  const tilt=state==='dead'?Math.sin(crashAge*10)*.12:air?airBeat*[-.12,.15,-.2,.1,-.28,.3,-.16,.16][jumpStyle]:active?Math.sin(t*4)*.025:0;
- const face=air?jumpStyle:cheer>0?6:Math.floor(t/2.8)%4;
+ const face=flightStart!==null?6:air?jumpStyle:cheer>0?6:Math.floor(t/2.8)%4;
  c.save();c.translate(x,z-bounce);c.rotate(tilt);
  // Rotate around the belly, completing the somersault before touchdown.
- if(air&&flipJump&&state!=='dead'){c.translate(0,-32);c.rotate(flipAngle(jumpAge));c.translate(0,32);}
+ if(air&&flipJump&&flightStart===null&&state!=='dead'){c.translate(0,-32);c.rotate(flipAngle(jumpAge));c.translate(0,32);}
  const squash=landing>0?Math.sin(landing/.16*Math.PI)*.13:0;c.scale(1+squash,1-squash);
  if(air)c.scale(1-airBeat*.035,1+airBeat*.05);
  function leg(px,phase,far){
@@ -53,6 +96,7 @@ function hippo(x,z,t,active){
   for(let j=0;j<3;j++){c.beginPath();c.moveTo(3+j*4,24-lift);c.lineTo(3+j*4,28-lift);c.stroke();}
   c.restore();
  }
+ if(flightStart!==null)drawJetpack(-34,-37,true);
  c.strokeStyle='#536846';c.lineWidth=4;c.beginPath();c.moveTo(-36,-29);c.quadraticCurveTo(-52,-40+Math.sin(stride)*3,-45,-48);c.stroke();
  leg(-23,Math.PI,true);leg(20,0,true);
  ellipse(-5,-32,42,29,'#8c9fa5');ellipse(-13,-40,26,16,'#9eafb2');
@@ -127,8 +171,8 @@ function drawPrimate(o,g){
 }
 function drawObstacle(o){let g=H-75;if(o.type==='monkey'||o.type==='gorilla'){drawPrimate(o,g);return;}if(o.type==='rock'){ellipse(o.x+o.w/2,g-3,o.w*.56,5,'#bac3a0');c.fillStyle='#514064';c.beginPath();c.moveTo(o.x,g);c.lineTo(o.x+3,g-o.h*.6);c.lineTo(o.x+o.w*.35,g-o.h);c.lineTo(o.x+o.w*.75,g-o.h*.9);c.lineTo(o.x+o.w,g);c.closePath();c.fill();c.strokeStyle='#2c203c';c.lineWidth=2.5;c.stroke();c.strokeStyle='#cbb3e0';c.beginPath();c.moveTo(o.x+8,g-o.h*.55);c.lineTo(o.x+o.w*.36,g-o.h*.8);c.lineTo(o.x+o.w*.64,g-o.h*.72);c.stroke();}else{round(o.x,g-o.h,o.w,o.h,7,'#a33e28');c.strokeStyle='#57251e';c.lineWidth=2.5;c.stroke();ellipse(o.x+o.w-3,g-o.h/2,6,o.h/2,'#ffd28b');ellipse(o.x+o.w-3,g-o.h/2,3,o.h/2-5,'#692b26');c.strokeStyle='#ffaf67';c.beginPath();c.moveTo(o.x+6,g-o.h+7);c.lineTo(o.x+o.w-12,g-o.h+9);c.stroke();}}
 function ui(){ $('overlay').classList.toggle('hidden',state==='running');$('pause').textContent=state==='paused'?'▶':'Ⅱ';if(state==='dead'){$('message').textContent='One more little hop?';$('sub').textContent=`You earned ${Math.floor(distance*.025)} XP. The riverbank is calling.`;$('start').innerHTML='Run again <span>↗</span>';}else if(state==='paused'){$('message').textContent='Take a little breather.';$('sub').textContent='Your adventure will be right here.';$('start').innerHTML='Keep running <span>↗</span>';} $('runStatus').textContent=state==='running'?'●  FIND YOUR RHYTHM':state==='dead'?'●  A GOOD RUN. A FRESH START.':state==='paused'?'●  TAKING A BREATHER':'●  YOUR NEXT ADVENTURE AWAITS';}
-function start(){enterPlay();if(state==='paused'){state='running';ui();return;}distance=0;speed=290;y=0;vy=0;timer=1.7;obstacles=[];level=1;jumpAge=0;landing=0;particles=[];levelFlash=0;cheer=0;crashAge=0;jumpCount=0;flipJump=false;state='running';$('level').textContent='LV 1 · EASY DOES IT';$('score').textContent='00000';ui();}
-function jump(){if(state!=='running')return;if(y<1){vy=600;y=.1;jumpAge=0;jumpCount++;flipJump=jumpCount%3===0;jumpStyle=(jumpStyle+1+Math.floor(Math.random()*7))%8;burst(Math.min(135,W*.22),H-75,10);burst(Math.min(135,W*.22)+25,H-125,5,true);}}
+function start(){enterPlay();if(state==='paused'){state='running';ui();return;}distance=0;speed=290;y=0;vy=0;timer=1.7;obstacles=[];level=1;jumpAge=0;landing=0;particles=[];levelFlash=0;cheer=0;crashAge=0;jumpCount=0;flipJump=false;resetJetpack();state='running';$('level').textContent='LV 1 · EASY DOES IT';$('score').textContent='00000';ui();}
+function jump(){if(state!=='running'||flightStart!==null)return;if(y<1){vy=600;y=.1;jumpAge=0;jumpCount++;flipJump=jumpCount%3===0;jumpStyle=(jumpStyle+1+Math.floor(Math.random()*7))%8;burst(Math.min(135,W*.22),H-75,10);burst(Math.min(135,W*.22)+25,H-125,5,true);}}
 function finish(){if(state==='dead')return;state='dead';crashAge=0;const score=Math.floor(distance*.025);if(score>best){best=score;try{localStorage.setItem('hippo-hop-best',best);}catch{}$('best').textContent=String(best).padStart(5,'0');}ui();}
 function tick(now){
  const dt=Math.min((now-last)/1000||0,.035);last=now;ambientClock+=dt;if(state==='dead')crashAge+=dt;
@@ -139,16 +183,18 @@ function tick(now){
   $('level').textContent='LV '+level+' · '+(level>=2?'JUNGLE MISCHIEF':level>=5?'HIPPO HUSTLE':['','EASY DOES IT','FIND YOUR FLOW','PICKING UP SPEED','WILD STRIDE'][level]);
   levelFlash=Math.max(0,levelFlash-dt);landing=Math.max(0,landing-dt);
   if(y>0)jumpAge+=dt;
-  const wasAirborne=y>0;vy-=1600*dt;y+=vy*dt;
+  const wasAirborne=y>0;if(flightStart===null){vy-=1600*dt;y+=vy*dt;}
   if(y<0){y=0;vy=0;if(wasAirborne){cheer=.65;landing=.16;burst(Math.min(135,W*.22),H-75,12);}}
+  updateJetpack(dt);
+  if(flightStart!==null)$('level').textContent='JETPACK · '+Math.ceil((1-flightProgress())*100)+' XP LEFT';
   for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.z+=p.vy*dt;p.vy+=180*dt;}particles=particles.filter(p=>p.life>0);
   timer-=dt;
   if(timer<=0){obstacles.push(makeObstacle(Math.floor(distance*.025))); timer=d.gap+Math.random()*.65;}
   const hx=Math.min(135,W*.22);
-  for(const o of obstacles){o.x-=speed*dt;if(!o.cleared&&o.x+o.w<hx-35){o.cleared=true;cheer=.8;burst(hx+22,H-140,5,true);}if(hx+48>o.x+4&&hx-30<o.x+o.w-3&&y<o.h-7){finish();break;}}
+  for(const o of obstacles){o.x-=speed*dt;if(!o.cleared&&o.x+o.w<hx-35){o.cleared=true;cheer=.8;burst(hx+22,H-140,5,true);}if(flightStart===null&&landingShield<=0&&hx+48>o.x+4&&hx-30<o.x+o.w-3&&y<o.h-7){finish();break;}}
   obstacles=obstacles.filter(o=>o.x+o.w>0);$('score').textContent=String(Math.floor(distance*.025)).padStart(5,'0');
  }
- bg();const hx=Math.min(135,W*.22),g=H-75;ellipse(hx+3,g+6,43*(1-y/500),5,'#b5c0a0');hippo(hx,g-9-y,clock,state==='running'&&y===0);obstacles.forEach(drawObstacle);drawEffects();requestAnimationFrame(tick);
+ bg();const hx=Math.min(135,W*.22),g=H-75;ellipse(hx+3,g+6,43*(1-y/500),5,'#b5c0a0');if(landingShield>0){c.save();c.globalAlpha=.35;c.strokeStyle='#51e3f0';c.lineWidth=3;c.beginPath();c.ellipse(hx,g-42-y,63,49,0,0,Math.PI*2);c.stroke();c.restore();}hippo(hx,g-9-y,clock,state==='running'&&y===0);obstacles.forEach(drawObstacle);drawJetpackPickup();drawEffects();requestAnimationFrame(tick);
 }requestAnimationFrame(tick);
 $('start').addEventListener('click',start);
 function hitsHippo(clientX,clientY){

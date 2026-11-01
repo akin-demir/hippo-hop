@@ -3,6 +3,9 @@ const canvas=document.querySelector('canvas'),c=canvas.getContext('2d'),$=id=>do
 let W=1000,H=410,dpr=1,state='ready',distance=0,speed=290,y=0,vy=0,obstacles=[],timer=1.8,last=0,clock=0,best=0,lastShake=0,motionEnabled=false,sensorSeen=false,motionTimer;
 let level=1,jumpStyle=-1,jumpAge=0,landing=0,particles=[],levelFlash=0;
 let jumpCount=0,flipJump=false;
+let shakeBoostUntil=0,shakeLaunchVelocity=0;
+const MIN_JUMP=580,MAX_JUMP=680;
+function shakeJumpVelocity(strength,threshold){return MIN_JUMP+(MAX_JUMP-MIN_JUMP)*Math.max(0,Math.min(1,(strength-threshold)/18));}
 let jetpack=null,jetpackSpawnXP=0,jetpackSpawned=false,flightStart=null,flightLift=0,landingShield=0;
 function resetJetpack(){jetpack=null;jetpackSpawnXP=205+Math.random()*55;jetpackSpawned=false;flightStart=null;landingShield=0;}
 function flightProgress(){return flightStart===null?null:Math.max(0,(distance-flightStart)/4000);}
@@ -175,8 +178,8 @@ function drawPrimate(o,g){
 }
 function drawObstacle(o){let g=H-75;if(o.type==='monkey'||o.type==='gorilla'){drawPrimate(o,g);return;}if(o.type==='rock'){ellipse(o.x+o.w/2,g-3,o.w*.56,5,'#bac3a0');c.fillStyle='#514064';c.beginPath();c.moveTo(o.x,g);c.lineTo(o.x+3,g-o.h*.6);c.lineTo(o.x+o.w*.35,g-o.h);c.lineTo(o.x+o.w*.75,g-o.h*.9);c.lineTo(o.x+o.w,g);c.closePath();c.fill();c.strokeStyle='#2c203c';c.lineWidth=2.5;c.stroke();c.strokeStyle='#cbb3e0';c.beginPath();c.moveTo(o.x+8,g-o.h*.55);c.lineTo(o.x+o.w*.36,g-o.h*.8);c.lineTo(o.x+o.w*.64,g-o.h*.72);c.stroke();}else{round(o.x,g-o.h,o.w,o.h,7,'#a33e28');c.strokeStyle='#57251e';c.lineWidth=2.5;c.stroke();ellipse(o.x+o.w-3,g-o.h/2,6,o.h/2,'#ffd28b');ellipse(o.x+o.w-3,g-o.h/2,3,o.h/2-5,'#692b26');c.strokeStyle='#ffaf67';c.beginPath();c.moveTo(o.x+6,g-o.h+7);c.lineTo(o.x+o.w-12,g-o.h+9);c.stroke();}}
 function ui(){ $('overlay').classList.toggle('hidden',state==='running');$('pause').textContent=state==='paused'?'▶':'Ⅱ';if(state==='dead'){$('message').textContent='One more little hop?';$('sub').textContent=`You earned ${Math.floor(distance*.025)} XP. The riverbank is calling.`;$('start').innerHTML='Run again <span>↗</span>';}else if(state==='paused'){$('message').textContent='Take a little breather.';$('sub').textContent='Your adventure will be right here.';$('start').innerHTML='Keep running <span>↗</span>';} $('runStatus').textContent=state==='running'?'●  FIND YOUR RHYTHM':state==='dead'?'●  A GOOD RUN. A FRESH START.':state==='paused'?'●  TAKING A BREATHER':'●  YOUR NEXT ADVENTURE AWAITS';}
-function start(){enterPlay();if(state==='paused'){state='running';ui();return;}distance=0;speed=290;y=0;vy=0;timer=1.7;obstacles=[];level=1;jumpAge=0;landing=0;particles=[];levelFlash=0;cheer=0;crashAge=0;jumpCount=0;flipJump=false;resetJetpack();state='running';$('level').textContent='LV 1 · EASY DOES IT';$('score').textContent='00000';ui();}
-function jump(){if(state!=='running'||flightStart!==null)return;if(y<1){vy=600;y=.1;jumpAge=0;jumpCount++;flipJump=jumpCount%3===0;jumpStyle=(jumpStyle+1+Math.floor(Math.random()*7))%8;burst(Math.min(135,W*.22),H-75,10);burst(Math.min(135,W*.22)+25,H-125,5,true);}}
+function start(){enterPlay();if(state==='paused'){state='running';ui();return;}distance=0;speed=290;y=0;vy=0;timer=1.7;obstacles=[];level=1;jumpAge=0;landing=0;particles=[];levelFlash=0;cheer=0;crashAge=0;jumpCount=0;flipJump=false;resetJetpack();shakeBoostUntil=0;shakeLaunchVelocity=0;lastShake=0;state='running';$('level').textContent='LV 1 · EASY DOES IT';$('score').textContent='00000';ui();}
+function jump(launchVelocity=600){if(state!=='running'||flightStart!==null)return false;if(y===0){shakeBoostUntil=0;vy=Math.max(MIN_JUMP,Math.min(MAX_JUMP,Number.isFinite(launchVelocity)?launchVelocity:600));y=.1;jumpAge=0;jumpCount++;flipJump=jumpCount%3===0;jumpStyle=(jumpStyle+1+Math.floor(Math.random()*7))%8;burst(Math.min(135,W*.22),H-75,10);burst(Math.min(135,W*.22)+25,H-125,5,true);return true;}return false;}
 function finish(){if(state==='dead')return;state='dead';crashAge=0;const score=Math.floor(distance*.025);if(score>best){best=score;try{localStorage.setItem('hippo-hop-best',best);}catch{}$('best').textContent=String(best).padStart(5,'0');}ui();}
 function tick(now){
  const dt=Math.min((now-last)/1000||0,.035);last=now;ambientClock+=dt;if(state==='dead')crashAge+=dt;
@@ -245,9 +248,15 @@ function onMotion(e){
   motionStatus('Sensor connected. Give your phone a quick upward shake to hop.','Sensor live · '+strength.toFixed(1)+' m/s²');lastSensorUi=now;
  }
  const threshold=Number($('sensitivity').max)+3-Number($('sensitivity').value);
+ // Launch immediately, then capture the peak of the same short shake pulse.
+ // Add only the extra impulse, preserving gravity and preventing a double jump.
+ if(state==='running'&&flightStart===null&&y>0&&vy>0&&now<shakeBoostUntil){
+  const launch=shakeJumpVelocity(strength,threshold);
+  if(launch>shakeLaunchVelocity){vy+=launch-shakeLaunchVelocity;shakeLaunchVelocity=launch;}
+ }
  if(strength>threshold&&now-lastShake>450){
   lastShake=now;motionStatus('Shake detected! Start a run to hop.','Shake detected ✓');
-  if(state==='running')jump();
+  if(state==='running'&&jump(shakeJumpVelocity(strength,threshold))){shakeLaunchVelocity=vy;shakeBoostUntil=now+120;motionStatus('Stronger shake, higher hop. Jump power is capped.','Shake hop ✓');}
  }
 }
 async function enableMotion(){

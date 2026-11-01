@@ -101,12 +101,12 @@ function bg(){
 }
 function drawPrimate(o,g){
  const gorilla=o.type==='gorilla',x=o.x+o.w/2,base=g-o.h,beat=Math.sin(ambientClock*8+o.phase);
- const fur=gorilla?'#4b5355':'#91613e',face=gorilla?'#8c9990':'#d9ae78';
+ const fur=gorilla?'#302640':'#b64c29',face=gorilla?'#d8bce8':'#ffe0a3';
  c.save();c.translate(x,g);
  ellipse(0,-2,o.w*.55,4,'#8e8b61');
  if(!gorilla){c.strokeStyle=fur;c.lineWidth=5;c.beginPath();c.moveTo(-12,-18);c.bezierCurveTo(-39,-22,-34,-46,-24,-36);c.stroke();}
  ellipse(0,-o.h*.42,o.w*.36,o.h*.4,fur);
- ellipse(0,-o.h*.36,o.w*.23,o.h*.22,gorilla?'#73817b':'#c89461');
+ ellipse(0,-o.h*.36,o.w*.23,o.h*.22,gorilla?'#725888':'#f2964b');
  for(const side of [-1,1]){
   round(side*o.w*.27-5,-15,11,15,5,fur);
   c.strokeStyle=fur;c.lineWidth=gorilla?12:7;c.lineCap='round';c.beginPath();c.moveTo(side*o.w*.26,-o.h*.53);c.lineTo(side*o.w*.42,-o.h*.48-((beat*side+1)*7));c.stroke();
@@ -121,7 +121,7 @@ function drawPrimate(o,g){
  }
  c.restore();
 }
-function drawObstacle(o){let g=H-75;if(o.type==='monkey'||o.type==='gorilla'){drawPrimate(o,g);return;}if(o.type==='rock'){ellipse(o.x+o.w/2,g-3,o.w*.56,5,'#bac3a0');c.fillStyle='#8b9981';c.beginPath();c.moveTo(o.x,g);c.lineTo(o.x+3,g-o.h*.6);c.lineTo(o.x+o.w*.35,g-o.h);c.lineTo(o.x+o.w*.75,g-o.h*.9);c.lineTo(o.x+o.w,g);c.closePath();c.fill();c.strokeStyle='#aeba9e';c.beginPath();c.moveTo(o.x+8,g-o.h*.55);c.lineTo(o.x+o.w*.36,g-o.h*.8);c.lineTo(o.x+o.w*.64,g-o.h*.72);c.stroke();}else{round(o.x,g-o.h,o.w,o.h,7,'#8a7856');ellipse(o.x+o.w-3,g-o.h/2,6,o.h/2,'#b1a078');ellipse(o.x+o.w-3,g-o.h/2,3,o.h/2-5,'#8d7952');c.strokeStyle='#b2a27c';c.beginPath();c.moveTo(o.x+6,g-o.h+7);c.lineTo(o.x+o.w-12,g-o.h+9);c.stroke();}}
+function drawObstacle(o){let g=H-75;if(o.type==='monkey'||o.type==='gorilla'){drawPrimate(o,g);return;}if(o.type==='rock'){ellipse(o.x+o.w/2,g-3,o.w*.56,5,'#bac3a0');c.fillStyle='#514064';c.beginPath();c.moveTo(o.x,g);c.lineTo(o.x+3,g-o.h*.6);c.lineTo(o.x+o.w*.35,g-o.h);c.lineTo(o.x+o.w*.75,g-o.h*.9);c.lineTo(o.x+o.w,g);c.closePath();c.fill();c.strokeStyle='#2c203c';c.lineWidth=2.5;c.stroke();c.strokeStyle='#cbb3e0';c.beginPath();c.moveTo(o.x+8,g-o.h*.55);c.lineTo(o.x+o.w*.36,g-o.h*.8);c.lineTo(o.x+o.w*.64,g-o.h*.72);c.stroke();}else{round(o.x,g-o.h,o.w,o.h,7,'#a33e28');c.strokeStyle='#57251e';c.lineWidth=2.5;c.stroke();ellipse(o.x+o.w-3,g-o.h/2,6,o.h/2,'#ffd28b');ellipse(o.x+o.w-3,g-o.h/2,3,o.h/2-5,'#692b26');c.strokeStyle='#ffaf67';c.beginPath();c.moveTo(o.x+6,g-o.h+7);c.lineTo(o.x+o.w-12,g-o.h+9);c.stroke();}}
 function ui(){ $('overlay').classList.toggle('hidden',state==='running');$('pause').textContent=state==='paused'?'▶':'Ⅱ';if(state==='dead'){$('message').textContent='One more little hop?';$('sub').textContent=`You earned ${Math.floor(distance*.025)} XP. The riverbank is calling.`;$('start').innerHTML='Run again <span>↗</span>';}else if(state==='paused'){$('message').textContent='Take a little breather.';$('sub').textContent='Your adventure will be right here.';$('start').innerHTML='Keep running <span>↗</span>';} $('runStatus').textContent=state==='running'?'●  FIND YOUR RHYTHM':state==='dead'?'●  A GOOD RUN. A FRESH START.':state==='paused'?'●  TAKING A BREATHER':'●  YOUR NEXT ADVENTURE AWAITS';}
 function start(){enterPlay();if(state==='paused'){state='running';ui();return;}distance=0;speed=290;y=0;vy=0;timer=1.7;obstacles=[];level=1;jumpAge=0;landing=0;particles=[];levelFlash=0;cheer=0;crashAge=0;state='running';$('level').textContent='LV 1 · EASY DOES IT';$('score').textContent='00000';ui();}
 function jump(){if(state!=='running')return;if(y<1){vy=600;y=.1;jumpAge=0;jumpStyle=(jumpStyle+1+Math.floor(Math.random()*7))%8;burst(Math.min(135,W*.22),H-75,10);burst(Math.min(135,W*.22)+25,H-125,5,true);}}
